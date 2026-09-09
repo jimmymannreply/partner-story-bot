@@ -24,6 +24,8 @@ import {
   type Designation,
 } from "@/data/mockPartnerData";
 import { openConsentEmail } from "@/lib/consentEmail";
+import { validateDesignation } from "@/lib/validation";
+import { designationCatalog } from "@/data/mockPartnerData";
 
 const STORAGE_KEY = "partner-story-bot-draft";
 
@@ -59,6 +61,7 @@ export interface JourneyState {
   showDemoBanner: boolean;
   sidePanelOpen: boolean;
   draftSavedAt: string | null;
+  rejectedEngagementIds: Set<string>;
 }
 
 const initialState: JourneyState = {
@@ -87,11 +90,16 @@ const initialState: JourneyState = {
   showDemoBanner: true,
   sidePanelOpen: false,
   draftSavedAt: null,
+  rejectedEngagementIds: new Set(),
 };
 
-type PersistedState = Omit<JourneyState, "completedActions" | "prefilledActions"> & {
+type PersistedState = Omit<
+  JourneyState,
+  "completedActions" | "prefilledActions" | "rejectedEngagementIds"
+> & {
   completedActions: string[];
   prefilledActions: string[];
+  rejectedEngagementIds: string[];
 };
 
 function serialize(state: JourneyState): PersistedState {
@@ -99,6 +107,7 @@ function serialize(state: JourneyState): PersistedState {
     ...state,
     completedActions: Array.from(state.completedActions),
     prefilledActions: Array.from(state.prefilledActions),
+    rejectedEngagementIds: Array.from(state.rejectedEngagementIds),
   };
 }
 
@@ -107,6 +116,7 @@ function deserialize(data: PersistedState): JourneyState {
     ...data,
     completedActions: new Set(data.completedActions),
     prefilledActions: new Set(data.prefilledActions),
+    rejectedEngagementIds: new Set(data.rejectedEngagementIds ?? []),
   };
 }
 
@@ -138,8 +148,12 @@ interface JourneyContextValue {
   signIn: () => void;
   continueAsGuest: () => void;
   confirmProfile: () => void;
+  rejectProfile: () => void;
   setDesignations: (d: Designation[]) => void;
+  removeDesignation: (id: string) => void;
+  addDesignation: (name: string) => string | null;
   selectEngagement: (e: EngagementDetails | null) => void;
+  rejectEngagement: (id: string) => void;
   setCustomEngagement: (s: string) => void;
   setCustomerApproval: (s: CustomerApprovalState) => void;
   setAffidavitAccepted: (b: boolean) => void;
@@ -293,10 +307,69 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     completeAction("confirm-profile");
   }, [completeAction, applyProfilePrefill]);
 
+  const rejectProfile = useCallback(() => {
+    setState((prev) => {
+      const completed = new Set(prev.completedActions);
+      completed.delete("sign-in");
+      completed.delete("confirm-profile");
+      return {
+        ...prev,
+        signedIn: false,
+        profileConfirmed: false,
+        completedActions: completed,
+        focusedActionId: "sign-in",
+      };
+    });
+  }, []);
+
   const setDesignations = useCallback(
     (d: Designation[]) => setState((prev) => ({ ...prev, designations: d })),
     []
   );
+
+  const removeDesignation = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      designations: prev.designations.filter((d) => d.id !== id),
+      selectedEngagement:
+        prev.selectedEngagement?.id === id ? null : prev.selectedEngagement,
+    }));
+  }, []);
+
+  const addDesignation = useCallback((name: string): string | null => {
+    const error = validateDesignation(name);
+    if (error) return error;
+    const canonical =
+      designationCatalog.find(
+        (d) => d.toLowerCase() === name.trim().toLowerCase()
+      ) ?? name.trim();
+    setState((prev) => {
+      if (prev.designations.some((d) => d.name === canonical)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        designations: [
+          ...prev.designations,
+          { id: `custom-${Date.now()}`, name: canonical, valid: true },
+        ],
+      };
+    });
+    return null;
+  }, []);
+
+  const rejectEngagement = useCallback((id: string) => {
+    setState((prev) => {
+      const rejected = new Set(prev.rejectedEngagementIds);
+      rejected.add(id);
+      return {
+        ...prev,
+        rejectedEngagementIds: rejected,
+        selectedEngagement:
+          prev.selectedEngagement?.id === id ? null : prev.selectedEngagement,
+      };
+    });
+  }, []);
 
   const selectEngagement = useCallback((e: EngagementDetails | null) => {
     setState((prev) => {
@@ -405,6 +478,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       completedActions: new Set(),
       prefilledActions: new Set(),
       designations: [...mockDesignations],
+      rejectedEngagementIds: new Set(),
     });
   }, []);
 
@@ -451,8 +525,12 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       signIn,
       continueAsGuest,
       confirmProfile,
+      rejectProfile,
       setDesignations,
+      removeDesignation,
+      addDesignation,
       selectEngagement,
+      rejectEngagement,
       setCustomEngagement,
       setCustomerApproval,
       setAffidavitAccepted,
@@ -481,8 +559,12 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       signIn,
       continueAsGuest,
       confirmProfile,
+      rejectProfile,
       setDesignations,
+      removeDesignation,
+      addDesignation,
       selectEngagement,
+      rejectEngagement,
       setCustomEngagement,
       setCustomerApproval,
       setAffidavitAccepted,

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { JourneyAction } from "@/data/journeyStages";
-import { customerApprovalStates } from "@/data/mockPartnerData";
+import {
+  customerApprovalStates,
+  designationCatalog,
+} from "@/data/mockPartnerData";
+import { validateCustomEngagement } from "@/lib/validation";
 import { useJourney } from "@/hooks/useJourneyState";
 import { InputRow } from "@/components/capture/InputRow";
 import { SignaturePad } from "@/components/capture/SignaturePad";
@@ -24,6 +28,14 @@ export function ActionInput({ action }: ActionInputProps) {
     "engagements" | "sales" | "mci"
   >("engagements");
   const [signingIn, setSigningIn] = useState(false);
+  const [newDesignation, setNewDesignation] = useState("");
+  const [designationError, setDesignationError] = useState<string | null>(null);
+  const [customEngagementInput, setCustomEngagementInput] = useState(
+    state.customEngagement
+  );
+  const [engagementError, setEngagementError] = useState<string | null>(null);
+  const [customEngagementValidated, setCustomEngagementValidated] =
+    useState(false);
 
   useEffect(() => {
     const v = journey.state.responses[action.id]?.value;
@@ -91,7 +103,7 @@ export function ActionInput({ action }: ActionInputProps) {
             <p><strong>Website:</strong> {journey.profile.website}</p>
           </div>
           {!state.profileConfirmed && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={journey.confirmProfile}
@@ -99,6 +111,14 @@ export function ActionInput({ action }: ActionInputProps) {
                 data-testid="confirm-profile"
               >
                 Looks right, continue
+              </button>
+              <button
+                type="button"
+                onClick={journey.rejectProfile}
+                className="rounded-dl border border-dl-border px-4 py-2 text-sm hover:bg-dl-page"
+                data-testid="this-isnt-me"
+              >
+                This isn&apos;t me
               </button>
             </div>
           )}
@@ -110,22 +130,99 @@ export function ActionInput({ action }: ActionInputProps) {
       return (
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {state.designations.map((d) => (
-              <li key={d.id} className="flex items-center gap-2">
-                <span className="text-dl-success">✓</span> {d.name}
+              <li
+                key={d.id}
+                className="flex items-center justify-between gap-2 rounded-dl border border-dl-border px-3 py-2"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-dl-success">✓</span>
+                  {d.name}
+                  {!d.valid && (
+                    <span className="text-xs text-dl-warning">Unverified</span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => journey.removeDesignation(d.id)}
+                  className="shrink-0 text-xs text-dl-text-secondary hover:text-dl-danger hover:underline"
+                  data-testid={`reject-designation-${d.id}`}
+                >
+                  This isn&apos;t mine
+                </button>
               </li>
             ))}
           </ul>
+          {state.designations.length === 0 && (
+            <p className="text-xs text-dl-warning">
+              No designations on file — add one below or skip.
+            </p>
+          )}
+          <div className="rounded-dl border border-dl-border bg-dl-page p-3">
+            <p className="text-xs font-medium text-dl-text-secondary">
+              Add an entry
+            </p>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={newDesignation}
+                onChange={(e) => {
+                  setNewDesignation(e.target.value);
+                  setDesignationError(null);
+                }}
+                placeholder="e.g. Solutions Partner — Data & AI"
+                className="flex-1 rounded-dl border border-dl-border px-3 py-2 text-sm"
+                list="designation-catalog"
+                data-testid="add-designation-input"
+              />
+              <datalist id="designation-catalog">
+                {designationCatalog.map((d) => (
+                  <option key={d} value={d} />
+                ))}
+              </datalist>
+              <button
+                type="button"
+                onClick={() => {
+                  const err = journey.addDesignation(newDesignation);
+                  if (err) {
+                    setDesignationError(err);
+                  } else {
+                    setNewDesignation("");
+                    setDesignationError(null);
+                  }
+                }}
+                className="rounded-dl border border-dl-border px-3 py-2 text-sm hover:bg-dl-surface"
+                data-testid="add-designation-button"
+              >
+                Add
+              </button>
+            </div>
+            {designationError && (
+              <p className="mt-1 text-xs text-red-600" data-testid="designation-error">
+                {designationError}
+              </p>
+            )}
+          </div>
           {!journey.isActionComplete(action.id) && (
-            <button
-              type="button"
-              onClick={() => journey.completeAction(action.id)}
-              className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
-              data-testid="confirm-designations"
-            >
-              Looks right, continue
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => journey.completeAction(action.id)}
+                className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
+                data-testid="confirm-designations"
+              >
+                Looks right, continue
+              </button>
+              <button
+                type="button"
+                onClick={() => journey.completeAction(action.id)}
+                className="rounded-dl border border-dl-border px-4 py-2 text-sm"
+                data-testid="skip-designations"
+              >
+                Skip
+              </button>
+            </div>
           )}
         </div>
       );
@@ -159,27 +256,48 @@ export function ActionInput({ action }: ActionInputProps) {
           <div className="grid gap-2">
             {journey.engagements
               .filter((e) => {
+                if (state.rejectedEngagementIds.has(e.id)) return false;
                 if (engagementTab === "engagements") return e.source === "engagement";
                 if (engagementTab === "sales") return e.source === "sale";
                 return e.source === "mci";
               })
               .map((e) => (
-                <button
+                <div
                   key={e.id}
-                  type="button"
-                  onClick={() => journey.selectEngagement(e)}
-                  className={`rounded-dl border p-3 text-left text-sm ${
+                  className={`rounded-dl border p-3 text-sm ${
                     state.selectedEngagement?.id === e.id
                       ? "border-dl-brand bg-blue-50"
-                      : "border-dl-border hover:border-dl-brand/40"
+                      : "border-dl-border"
                   }`}
                   data-testid={`engagement-${e.id}`}
                 >
-                  <p className="font-medium">{e.name}</p>
-                  <p className="text-xs text-dl-text-secondary">
-                    {e.customer} · {e.date}
-                  </p>
-                </button>
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        journey.selectEngagement(e);
+                        journey.setCustomEngagement("");
+                        setCustomEngagementInput("");
+                        setCustomEngagementValidated(false);
+                        setEngagementError(null);
+                      }}
+                      className="flex-1 text-left"
+                    >
+                      <p className="font-medium">{e.name}</p>
+                      <p className="text-xs text-dl-text-secondary">
+                        {e.customer} · {e.date}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => journey.rejectEngagement(e.id)}
+                      className="shrink-0 text-xs text-dl-text-secondary hover:text-dl-danger hover:underline"
+                      data-testid={`reject-engagement-${e.id}`}
+                    >
+                      This isn&apos;t mine
+                    </button>
+                  </div>
+                </div>
               ))}
           </div>
           {state.selectedEngagement && (
@@ -187,18 +305,58 @@ export function ActionInput({ action }: ActionInputProps) {
               Pre-filled interview sections from {state.selectedEngagement.source === "mci" ? "MCI" : state.selectedEngagement.source === "sale" ? "Microsoft Sales" : "engagement"} data.
             </p>
           )}
-          <input
-            type="text"
-            value={state.customEngagement}
-            onChange={(e) => journey.setCustomEngagement(e.target.value)}
-            placeholder="Or add your own engagement..."
-            className="w-full rounded-dl border border-dl-border px-3 py-2 text-sm"
-          />
+          <div className="rounded-dl border border-dl-border bg-dl-page p-3">
+            <p className="text-xs font-medium text-dl-text-secondary">
+              Add an entry
+            </p>
+            <input
+              type="text"
+              value={customEngagementInput}
+              onChange={(e) => {
+                setCustomEngagementInput(e.target.value);
+                setEngagementError(null);
+                setCustomEngagementValidated(false);
+                journey.setCustomEngagement("");
+              }}
+              placeholder='e.g. Azure AI migration — Fabrikam Industries'
+              className="mt-2 w-full rounded-dl border border-dl-border px-3 py-2 text-sm"
+              data-testid="add-engagement-input"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const err = validateCustomEngagement(customEngagementInput);
+                if (err) {
+                  setEngagementError(err);
+                  setCustomEngagementValidated(false);
+                } else {
+                  journey.setCustomEngagement(customEngagementInput.trim());
+                  setEngagementError(null);
+                  setCustomEngagementValidated(true);
+                  journey.selectEngagement(null);
+                }
+              }}
+              className="mt-2 rounded-dl border border-dl-border px-3 py-2 text-sm hover:bg-dl-surface"
+              data-testid="add-engagement-button"
+            >
+              Validate and add
+            </button>
+            {engagementError && (
+              <p className="mt-1 text-xs text-red-600" data-testid="engagement-error">
+                {engagementError}
+              </p>
+            )}
+            {customEngagementValidated && (
+              <p className="mt-1 text-xs text-dl-success">
+                Entry validated: {state.customEngagement}
+              </p>
+            )}
+          </div>
           {!journey.isActionComplete(action.id) && (
             <button
               type="button"
               onClick={() => journey.completeAction(action.id)}
-              disabled={!state.selectedEngagement && !state.customEngagement}
+              disabled={!state.selectedEngagement && !customEngagementValidated}
               className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white disabled:opacity-50"
               data-testid="select-engagement"
             >
