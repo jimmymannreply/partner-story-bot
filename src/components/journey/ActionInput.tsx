@@ -114,7 +114,7 @@ export function ActionInput({ action }: ActionInputProps) {
               </button>
               <button
                 type="button"
-                onClick={journey.rejectProfile}
+                onClick={journey.continueAsGuest}
                 className="rounded-dl border border-dl-border px-4 py-2 text-sm hover:bg-dl-page"
                 data-testid="this-isnt-me"
               >

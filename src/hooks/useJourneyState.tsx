@@ -148,7 +148,6 @@ interface JourneyContextValue {
   signIn: () => void;
   continueAsGuest: () => void;
   confirmProfile: () => void;
-  rejectProfile: () => void;
   setDesignations: (d: Designation[]) => void;
   removeDesignation: (id: string) => void;
   addDesignation: (name: string) => string | null;
@@ -306,21 +305,6 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     setState((prev) => applyProfilePrefill({ ...prev, profileConfirmed: true }));
     completeAction("confirm-profile");
   }, [completeAction, applyProfilePrefill]);
-
-  const rejectProfile = useCallback(() => {
-    setState((prev) => {
-      const completed = new Set(prev.completedActions);
-      completed.delete("sign-in");
-      completed.delete("confirm-profile");
-      return {
-        ...prev,
-        signedIn: false,
-        profileConfirmed: false,
-        completedActions: completed,
-        focusedActionId: "sign-in",
-      };
-    });
-  }, []);
 
   const setDesignations = useCallback(
     (d: Designation[]) => setState((prev) => ({ ...prev, designations: d })),
@@ -525,7 +509,6 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       signIn,
       continueAsGuest,
       confirmProfile,
-      rejectProfile,
       setDesignations,
       removeDesignation,
       addDesignation,
@@ -559,7 +542,6 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       signIn,
       continueAsGuest,
       confirmProfile,
-      rejectProfile,
       setDesignations,
       removeDesignation,
       addDesignation,
