@@ -35,6 +35,30 @@ After the GitHub Action completes, the shareable URL is:
 
 **https://\<your-github-username\>.github.io/partner-story-bot/**
 
+## Deploy to Azure Static Web Apps (public demo)
+
+No end-user licenses required — the site is publicly accessible.
+
+```powershell
+cd partner-story-bot
+az login
+gh auth login
+.\scripts\deploy-to-azure.ps1
+```
+
+This creates a **Free** tier Static Web App, links GitHub CI/CD, and sets the deployment token secret. After the workflow runs, your URL will be:
+
+**https://stapp-partnerstory.azurestaticapps.net** (or similar)
+
+Alternative with Azure Developer CLI:
+
+```powershell
+azd auth login
+azd env new partnerstory -l eastus2
+azd up
+azd deploy
+```
+
 ## Architecture
 
 Four macro-stages with action checklists: Collect context → Capture your story → Customer voice → Review & submit. All OAuth, Skilling Hub, sales data, and scoring elements are simulated and visibly labeled.

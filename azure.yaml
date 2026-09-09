@@ -1,0 +1,11 @@
+# Azure Developer CLI — Partner Story Bot (public stakeholder demo)
+name: partner-story-bot
+metadata:
+  template: partner-story-bot@1.0.0
+
+services:
+  web:
+    project: .
+    language: js
+    host: staticwebapp
+    dist: dist
