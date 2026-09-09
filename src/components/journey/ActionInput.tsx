@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { JourneyAction } from "@/data/journeyStages";
-import { designationCatalog } from "@/data/mockPartnerData";
 import { customerApprovalStates } from "@/data/mockPartnerData";
 import { useJourney } from "@/hooks/useJourneyState";
 import { InputRow } from "@/components/capture/InputRow";
 import { SignaturePad } from "@/components/capture/SignaturePad";
+import { VideoRecorder } from "@/components/capture/VideoRecorder";
 import { SimulatedBadge } from "@/components/simulate/SimulatedBadge";
 import { EvidenceEngine } from "@/components/simulate/EvidenceEngine";
+import { buildConsentMailto } from "@/lib/consentEmail";
 
 interface ActionInputProps {
   action: JourneyAction;
@@ -19,15 +20,21 @@ export function ActionInput({ action }: ActionInputProps) {
     journey.state.responses[action.id]?.value ?? ""
   );
   const [emailInput, setEmailInput] = useState("");
-  const [newDesignation, setNewDesignation] = useState("");
-  const [engagementTab, setEngagementTab] = useState<"engagements" | "sales">(
-    "engagements"
-  );
+  const [engagementTab, setEngagementTab] = useState<
+    "engagements" | "sales" | "mci"
+  >("engagements");
   const [signingIn, setSigningIn] = useState(false);
 
-  const handleComplete = (files?: string[]) => {
-    journey.setResponse(action.id, { value: text, files });
-    journey.completeAction(action.id, { value: text, files });
+  useEffect(() => {
+    const v = journey.state.responses[action.id]?.value;
+    if (v) setText(v);
+  }, [action.id, journey.state.responses[action.id]?.value]);
+
+  const isPrefilled = state.prefilledActions.has(action.id);
+
+  const handleComplete = (files?: string[], videoUrl?: string) => {
+    journey.setResponse(action.id, { value: text, files, videoUrl });
+    journey.completeAction(action.id, { value: text, files, videoUrl });
   };
 
   switch (action.inputType) {
@@ -35,19 +42,37 @@ export function ActionInput({ action }: ActionInputProps) {
       return (
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
-          {!state.signedIn ? (
-            <button
-              type="button"
-              onClick={() => {
-                setSigningIn(true);
-                setTimeout(() => journey.signIn(), 1200);
-              }}
-              disabled={signingIn}
-              className="rounded-dl bg-dl-brand px-4 py-2 text-sm font-medium text-white hover:bg-dl-brand-hover disabled:opacity-60"
-              data-testid="sign-in-button"
-            >
-              {signingIn ? "Signing in..." : "Sign in with Partner Center"}
-            </button>
+          {!state.signedIn && !state.guestMode ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setSigningIn(true);
+                  setTimeout(() => journey.signIn(), 1200);
+                }}
+                disabled={signingIn}
+                className="rounded-dl bg-dl-brand px-4 py-2 text-sm font-medium text-white hover:bg-dl-brand-hover disabled:opacity-60"
+                data-testid="sign-in-button"
+              >
+                {signingIn ? "Signing in..." : "Sign in with Partner Center"}
+              </button>
+              <button
+                type="button"
+                onClick={journey.continueAsGuest}
+                className="block text-sm text-dl-brand hover:underline"
+                data-testid="continue-as-guest"
+              >
+                Continue without signing in
+              </button>
+              <p className="text-xs text-dl-text-secondary">
+                Guest mode: fill the form manually and submit at attest and sign.
+                Your progress is saved automatically.
+              </p>
+            </>
+          ) : state.guestMode ? (
+            <p className="text-sm text-dl-text-secondary">
+              Continuing as guest. Select your win below, then capture your story.
+            </p>
           ) : (
             <p className="text-sm text-dl-success">Signed in successfully.</p>
           )}
@@ -55,6 +80,7 @@ export function ActionInput({ action }: ActionInputProps) {
       );
 
     case "confirm":
+      if (state.guestMode) return null;
       return (
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
@@ -74,21 +100,13 @@ export function ActionInput({ action }: ActionInputProps) {
               >
                 Looks right, continue
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  journey.resetJourney();
-                }}
-                className="rounded-dl border border-dl-border px-4 py-2 text-sm"
-              >
-                Sign in again
-              </button>
             </div>
           )}
         </div>
       );
 
     case "designations":
+      if (state.guestMode) return null;
       return (
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
@@ -99,57 +117,15 @@ export function ActionInput({ action }: ActionInputProps) {
               </li>
             ))}
           </ul>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newDesignation}
-              onChange={(e) => setNewDesignation(e.target.value)}
-              placeholder="Add a designation..."
-              className="flex-1 rounded-dl border border-dl-border px-3 py-2 text-sm"
-              list="designation-catalog"
-            />
-            <datalist id="designation-catalog">
-              {designationCatalog.map((d) => (
-                <option key={d} value={d} />
-              ))}
-            </datalist>
+          {!journey.isActionComplete(action.id) && (
             <button
               type="button"
-              onClick={() => {
-                if (!newDesignation) return;
-                const valid = designationCatalog.includes(newDesignation);
-                journey.setDesignations([
-                  ...state.designations,
-                  {
-                    id: `custom-${Date.now()}`,
-                    name: newDesignation,
-                    valid,
-                  },
-                ]);
-                setNewDesignation("");
-              }}
-              className="rounded-dl border border-dl-border px-3 py-2 text-sm"
+              onClick={() => journey.completeAction(action.id)}
+              className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
+              data-testid="confirm-designations"
             >
-              Add
+              Looks right, continue
             </button>
-          </div>
-          {!journey.isActionComplete(action.id) && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => journey.completeAction(action.id)}
-                className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
-                data-testid="confirm-designations"
-              >
-                Looks right, continue
-              </button>
-              <button
-                type="button"
-                className="rounded-dl border border-dl-border px-4 py-2 text-sm"
-              >
-                Skip
-              </button>
-            </div>
           )}
         </div>
       );
@@ -159,7 +135,13 @@ export function ActionInput({ action }: ActionInputProps) {
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
           <div className="flex gap-2 border-b border-dl-border">
-            {(["engagements", "sales"] as const).map((tab) => (
+            {(
+              [
+                ["engagements", "Engagements"],
+                ["sales", "Microsoft Sales"],
+                ["mci", "MCI"],
+              ] as const
+            ).map(([tab, label]) => (
               <button
                 key={tab}
                 type="button"
@@ -170,17 +152,17 @@ export function ActionInput({ action }: ActionInputProps) {
                     : "text-dl-text-secondary"
                 }`}
               >
-                {tab === "engagements" ? "Engagements" : "Microsoft Sales"}
+                {label}
               </button>
             ))}
           </div>
           <div className="grid gap-2">
             {journey.engagements
-              .filter((e) =>
-                engagementTab === "engagements"
-                  ? e.type === "engagement"
-                  : e.type === "sale"
-              )
+              .filter((e) => {
+                if (engagementTab === "engagements") return e.source === "engagement";
+                if (engagementTab === "sales") return e.source === "sale";
+                return e.source === "mci";
+              })
               .map((e) => (
                 <button
                   key={e.id}
@@ -200,6 +182,11 @@ export function ActionInput({ action }: ActionInputProps) {
                 </button>
               ))}
           </div>
+          {state.selectedEngagement && (
+            <p className="rounded-dl bg-dl-success-bg px-3 py-2 text-xs text-dl-success">
+              Pre-filled interview sections from {state.selectedEngagement.source === "mci" ? "MCI" : state.selectedEngagement.source === "sale" ? "Microsoft Sales" : "engagement"} data.
+            </p>
+          )}
           <input
             type="text"
             value={state.customEngagement}
@@ -267,7 +254,13 @@ export function ActionInput({ action }: ActionInputProps) {
         </div>
       );
 
-    case "customer-invite":
+    case "customer-invite": {
+      const engagementName =
+        state.selectedEngagement?.name || state.customEngagement || "your engagement";
+      const partnerName = state.guestMode
+        ? "Partner"
+        : journey.profile.companyName;
+
       return (
         <div className="mt-3 space-y-3">
           <SimulatedBadge />
@@ -282,7 +275,7 @@ export function ActionInput({ action }: ActionInputProps) {
           <button
             type="button"
             onClick={() => {
-              if (!emailInput) return;
+              if (!emailInput.includes("@")) return;
               journey.setCustomerEmails([...state.customerEmails, emailInput]);
               setEmailInput("");
             }}
@@ -292,27 +285,46 @@ export function ActionInput({ action }: ActionInputProps) {
           </button>
           {state.customerEmails.length > 0 && (
             <div className="rounded-dl border border-dl-border bg-dl-page p-3 text-sm">
-              <p className="font-medium">Consent email preview (simulated):</p>
-              <p className="mt-1 text-dl-text-secondary">
-                To: {state.customerEmails.join(", ")}
-              </p>
-              <p className="text-dl-text-secondary">
-                Subject: Share your experience — quick video or voice recording
-              </p>
+              <p className="font-medium">Consent email preview:</p>
+              <ul className="mt-1 text-dl-text-secondary">
+                {state.customerEmails.map((e) => (
+                  <li key={e}>
+                    {e}
+                    {state.consentEmailsSent.includes(e) && (
+                      <span className="ml-2 text-dl-success">(sent)</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs text-dl-brand">
+                  Preview message
+                </summary>
+                <pre className="mt-1 whitespace-pre-wrap text-xs text-dl-text-secondary">
+                  {decodeURIComponent(
+                    buildConsentMailto(
+                      state.customerEmails[0],
+                      partnerName,
+                      engagementName
+                    ).split("body=")[1] ?? ""
+                  )}
+                </pre>
+              </details>
             </div>
           )}
           {!journey.isActionComplete(action.id) && state.customerEmails.length > 0 && (
             <button
               type="button"
-              onClick={() => journey.completeAction(action.id)}
+              onClick={journey.sendConsentEmails}
               className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
               data-testid="send-consent"
             >
-              Send consent emails (simulated)
+              Open email to send consent links
             </button>
           )}
         </div>
       );
+    }
 
     case "review":
       return (
@@ -327,6 +339,9 @@ export function ActionInput({ action }: ActionInputProps) {
                 >
                   <summary className="cursor-pointer font-medium">
                     {a.title}
+                    {state.prefilledActions.has(a.id) && (
+                      <span className="ml-2 text-xs text-dl-brand">(pre-filled)</span>
+                    )}
                   </summary>
                   <p className="mt-2 text-dl-text-secondary">
                     {journey.state.responses[a.id]?.value || "—"}
@@ -350,6 +365,11 @@ export function ActionInput({ action }: ActionInputProps) {
     case "attest":
       return (
         <div className="mt-3 space-y-3">
+          {state.guestMode && (
+            <p className="rounded-dl bg-dl-page px-3 py-2 text-sm text-dl-text-secondary">
+              Guest submission: provide your name and signature below to submit.
+            </p>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -369,18 +389,33 @@ export function ActionInput({ action }: ActionInputProps) {
             data-testid="signature-name"
           />
           <SignaturePad onSign={journey.setSignatureDataUrl} />
-          {!journey.isActionComplete(action.id) && (
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={journey.submit}
-              disabled={
-                !state.attested || !state.signatureName || !state.signatureDataUrl
-              }
-              className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white disabled:opacity-50"
-              data-testid="submit-attestation"
+              onClick={journey.saveDraft}
+              className="rounded-dl border border-dl-border px-4 py-2 text-sm"
+              data-testid="save-draft"
             >
-              Submit
+              Save draft
             </button>
+            {!journey.isActionComplete(action.id) && (
+              <button
+                type="button"
+                onClick={journey.submit}
+                disabled={
+                  !state.attested || !state.signatureName || !state.signatureDataUrl
+                }
+                className="rounded-dl bg-dl-brand px-4 py-2 text-sm text-white disabled:opacity-50"
+                data-testid="submit-attestation"
+              >
+                Submit
+              </button>
+            )}
+          </div>
+          {state.draftSavedAt && (
+            <p className="text-xs text-dl-text-secondary">
+              Draft saved {new Date(state.draftSavedAt).toLocaleString()}
+            </p>
           )}
         </div>
       );
@@ -391,43 +426,78 @@ export function ActionInput({ action }: ActionInputProps) {
     default:
       return (
         <div className="mt-3">
+          {isPrefilled && (
+            <p className="mb-2 rounded-dl bg-blue-50 px-3 py-2 text-xs text-dl-brand">
+              Pre-filled from partner data — review and edit as needed.
+            </p>
+          )}
           {state.skipAheadCount > 0 && action.id === "about-you" && (
             <div className="mb-3 rounded-dl bg-dl-success-bg px-3 py-2 text-sm text-dl-success">
               Found answers to {state.skipAheadCount} of 11 questions from your
               uploaded case study.
             </div>
           )}
-          <InputRow
-            value={text}
-            onChange={setText}
-            onFiles={(files) => {
-              journey.setResponse(action.id, { value: text, files });
-              if (action.inputType === "upload" && files.length > 0) {
-                handleComplete(files);
-              }
-            }}
-          />
+          {action.id === "customer-record" ? (
+            <VideoRecorder
+              onRecordingComplete={(_blob, url) => {
+                setText("Customer video recording attached.");
+                journey.setResponse(action.id, {
+                  value: "Customer video recording attached.",
+                  videoUrl: url,
+                });
+              }}
+            />
+          ) : (
+            <InputRow
+              value={text}
+              onChange={setText}
+              showVideo={action.inputType === "text"}
+              onVideoRecorded={(url) => {
+                journey.setResponse(action.id, {
+                  value: text || "Video response recorded.",
+                  videoUrl: url,
+                });
+              }}
+              onFiles={(files) => {
+                journey.setResponse(action.id, { value: text, files });
+                if (action.inputType === "upload" && files.length > 0) {
+                  handleComplete(files);
+                }
+              }}
+            />
+          )}
           {!journey.isActionComplete(action.id) && (
             <button
               type="button"
-              onClick={() => handleComplete()}
-              disabled={!text && action.inputType !== "upload"}
+              onClick={() =>
+                handleComplete(
+                  journey.state.responses[action.id]?.files,
+                  journey.state.responses[action.id]?.videoUrl
+                )
+              }
+              disabled={
+                !text &&
+                action.inputType !== "upload" &&
+                !journey.state.responses[action.id]?.videoUrl
+              }
               className="mt-3 rounded-dl bg-dl-brand px-4 py-2 text-sm text-white disabled:opacity-50"
               data-testid={`complete-${action.id}`}
             >
               Save and continue
             </button>
           )}
-          {action.id === "customer-record" && !state.customerVideoReceived && (
-            <button
-              type="button"
-              onClick={journey.simulateCustomerVideo}
-              className="mt-2 rounded-dl border border-dl-border px-4 py-2 text-sm"
-              data-testid="simulate-video"
-            >
-              Simulate customer video received
-            </button>
-          )}
+          {action.id === "customer-record" &&
+            journey.state.responses[action.id]?.videoUrl &&
+            !state.customerVideoReceived && (
+              <button
+                type="button"
+                onClick={journey.markCustomerVideoReceived}
+                className="mt-2 rounded-dl bg-dl-brand px-4 py-2 text-sm text-white"
+                data-testid="confirm-customer-video"
+              >
+                Confirm video saved
+              </button>
+            )}
           {action.id === "customer-received" && state.customerVideoReceived && (
             <span className="mt-2 inline-flex rounded-full bg-dl-success-bg px-3 py-1 text-xs text-dl-success">
               Video received

@@ -10,6 +10,7 @@ interface ActionCardProps {
   stageId: string;
   isComplete: boolean;
   isActive: boolean;
+  isPrefilled?: boolean;
   onActivate: () => void;
   onNext: () => void;
 }
@@ -18,6 +19,7 @@ export function ActionCard({
   action,
   isComplete,
   isActive,
+  isPrefilled,
   onActivate,
   onNext,
 }: ActionCardProps) {
@@ -34,6 +36,8 @@ export function ActionCard({
             : "border-dl-border bg-dl-surface opacity-70"
       )}
       data-testid={`action-${action.id}`}
+      onMouseEnter={onActivate}
+      onFocus={onActivate}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -55,6 +59,11 @@ export function ActionCard({
               )}
             >
               {action.title}
+              {isPrefilled && !isComplete && (
+                <span className="ml-2 text-xs font-normal text-dl-brand">
+                  Pre-filled
+                </span>
+              )}
             </h3>
             <p className="mt-1 text-sm text-dl-text-secondary">
               {action.description}

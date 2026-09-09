@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem("partner-story-bot-draft");
+  });
+});
+
 test.describe("Partner Story Bot journey", () => {
   test("landing to journey start", async ({ page }) => {
     await page.goto("/");
@@ -16,6 +22,28 @@ test.describe("Partner Story Bot journey", () => {
     await expect(page.getByTestId("stage-panel")).toBeVisible();
   });
 
+  test("preview script modal on partner page", async ({ page }) => {
+    await page.goto("/partner");
+    await page.getByTestId("preview-script").click();
+    await expect(page.getByTestId("script-preview-modal")).toBeVisible();
+    await expect(page.getByText("Interview script preview")).toBeVisible();
+  });
+
+  test("guest flow without sign-in", async ({ page }) => {
+    await page.goto("/journey");
+    await page.getByTestId("continue-as-guest").click();
+    await page.getByTestId("action-select-win").scrollIntoViewIfNeeded();
+    await page.getByTestId("engagement-eng-1").click();
+    await page.getByTestId("select-engagement").click();
+    await page.getByTestId("affidavit-checkbox").check();
+    await page.getByTestId("approval-Unknown").click();
+    await page.getByTestId("accept-consent").click();
+    await page.getByTestId("stage-capture").click();
+    await expect(
+      page.getByTestId("action-customer").getByText("Pre-filled")
+    ).toBeVisible();
+  });
+
   test("collect context stage flow", async ({ page }) => {
     await page.goto("/journey");
 
@@ -27,6 +55,7 @@ test.describe("Partner Story Bot journey", () => {
     await page.getByTestId("confirm-profile").click();
     await page.getByTestId("confirm-designations").click();
 
+    await page.getByTestId("action-select-win").scrollIntoViewIfNeeded();
     await page.getByTestId("engagement-eng-1").click();
     await page.getByTestId("select-engagement").click();
 

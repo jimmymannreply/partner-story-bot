@@ -1,24 +1,28 @@
 import { useRef, useState } from "react";
-import { Mic, MicOff, Paperclip, Video, Square } from "lucide-react";
+import { Mic, MicOff, Paperclip, Square } from "lucide-react";
 import { cn, obfuscateFilename } from "@/lib/utils";
+import { VideoRecorder } from "./VideoRecorder";
 
 interface InputRowProps {
   value: string;
   onChange: (value: string) => void;
   onFiles?: (files: string[]) => void;
+  onVideoRecorded?: (objectUrl: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  showVideo?: boolean;
 }
 
 export function InputRow({
   value,
   onChange,
   onFiles,
+  onVideoRecorded,
   placeholder = "Type your answer or use the record button...",
   disabled,
+  showVideo = true,
 }: InputRowProps) {
-  const [recording, setRecording] = useState(false);
-  const [videoMode, setVideoMode] = useState(false);
+  const [audioRecording, setAudioRecording] = useState(false);
   const [timer, setTimer] = useState(0);
   const [piiChecked, setPiiChecked] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
@@ -26,7 +30,7 @@ export function InputRow({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const startRecording = () => {
+  const startAudioRecording = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -42,16 +46,15 @@ export function InputRow({
       recognition.start();
       recognitionRef.current = recognition;
     }
-    setRecording(true);
+    setAudioRecording(true);
     setTimer(0);
     timerRef.current = setInterval(() => setTimer((t) => t + 1), 1000);
   };
 
-  const stopRecording = () => {
+  const stopAudioRecording = () => {
     recognitionRef.current?.stop();
     if (timerRef.current) clearInterval(timerRef.current);
-    setRecording(false);
-    setVideoMode(false);
+    setAudioRecording(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +71,7 @@ export function InputRow({
     `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-3 space-y-3">
       <div className="flex gap-2">
         <input
           type="text"
@@ -81,40 +84,18 @@ export function InputRow({
         />
         <button
           type="button"
-          onClick={recording ? stopRecording : startRecording}
+          onClick={audioRecording ? stopAudioRecording : startAudioRecording}
           disabled={disabled}
           className={cn(
             "rounded-dl border px-3 py-2",
-            recording
+            audioRecording
               ? "border-red-300 bg-red-50 text-red-600"
               : "border-dl-border hover:bg-dl-page"
           )}
-          aria-label={recording ? "Stop recording" : "Start recording"}
+          aria-label={audioRecording ? "Stop recording" : "Start audio recording"}
           data-testid="mic-button"
         >
-          {recording ? <Square size={18} /> : <Mic size={18} />}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (recording && videoMode) {
-              stopRecording();
-            } else {
-              setVideoMode(true);
-              startRecording();
-            }
-          }}
-          disabled={disabled}
-          className={cn(
-            "rounded-dl border px-3 py-2",
-            videoMode && recording
-              ? "border-red-300 bg-red-50 text-red-600"
-              : "border-dl-border hover:bg-dl-page"
-          )}
-          aria-label="Video record"
-          data-testid="video-button"
-        >
-          <Video size={18} />
+          {audioRecording ? <Square size={18} /> : <Mic size={18} />}
         </button>
         <button
           type="button"
@@ -135,24 +116,21 @@ export function InputRow({
           data-testid="file-input"
         />
       </div>
-      {recording && (
+
+      {audioRecording && (
         <div className="flex items-center gap-2 text-xs text-dl-text-secondary">
           <MicOff size={14} className="animate-pulse text-red-500" />
-          {videoMode ? "Recording video" : "Recording audio"} — {formatTimer(timer)}
-          <div className="flex h-4 flex-1 items-end gap-0.5">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-1 rounded-full bg-dl-brand animate-pulse"
-                style={{
-                  height: `${8 + Math.random() * 16}px`,
-                  animationDelay: `${i * 0.1}s`,
-                }}
-              />
-            ))}
-          </div>
+          Recording audio — {formatTimer(timer)}
         </div>
       )}
+
+      {showVideo && onVideoRecorded && (
+        <VideoRecorder
+          disabled={disabled}
+          onRecordingComplete={(_blob, url) => onVideoRecorded(url)}
+        />
+      )}
+
       <label className="flex items-center gap-2 text-xs text-dl-text-secondary">
         <input
           type="checkbox"

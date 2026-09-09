@@ -19,7 +19,11 @@ export function ContextBar() {
           <div>
             <span className="text-dl-text-secondary">Partner </span>
             <span className="font-medium text-dl-text">
-              {state.signedIn ? profile.companyName : "—"}
+              {state.signedIn
+                ? profile.companyName
+                : state.guestMode
+                  ? "Guest"
+                  : "—"}
             </span>
           </div>
           <div>

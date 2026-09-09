@@ -3,6 +3,7 @@ import { ActionCard } from "./ActionCard";
 
 export function StagePanel() {
   const journey = useJourney();
+  const { state } = journey;
   const stage = journey.stages.find((s) => s.id === journey.state.activeStageId);
   if (!stage) return null;
 
@@ -45,7 +46,8 @@ export function StagePanel() {
             stageId={stage.id}
             isComplete={journey.isActionComplete(action.id)}
             isActive={journey.isActionActive(stage.id, action.id)}
-            onActivate={() => {}}
+            isPrefilled={state.prefilledActions.has(action.id)}
+            onActivate={() => journey.setFocusedAction(action.id)}
             onNext={() => handleNext(action.id)}
           />
         ))}
