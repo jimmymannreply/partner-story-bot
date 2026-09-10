@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { X } from "lucide-react";
+import { VideoRecorder } from "@/components/capture/VideoRecorder";
 import { SimulatedBadge } from "@/components/simulate/SimulatedBadge";
 import { useJourneyV2 } from "@/v2/hooks/useJourneyV2";
 
 export function V2SideTaskPanel() {
   const { state, toggleSidePanel } = useJourneyV2();
+  const [sideVideoUrl, setSideVideoUrl] = useState<string | null>(null);
   if (!state.sidePanelOpen) return null;
 
   return (
@@ -31,8 +34,16 @@ export function V2SideTaskPanel() {
           <div className="rounded-lg border border-me-line p-4">
             <p className="text-sm font-medium text-me-navy">Record verbatim quote</p>
             <p className="mt-1 text-xs text-me-slate">
-              Use the microphone on any capture action.
+              Record a short video or voice clip without leaving the interview.
             </p>
+            <div className="mt-3">
+              <VideoRecorder
+                onRecordingComplete={(_blob, url) => setSideVideoUrl(url)}
+              />
+            </div>
+            {sideVideoUrl && (
+              <p className="mt-2 text-xs text-me-green">Verbatim clip saved for this session.</p>
+            )}
           </div>
         </div>
       </div>

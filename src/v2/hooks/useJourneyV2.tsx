@@ -16,6 +16,7 @@ const STORAGE_KEY = "partner-story-bot-v2-draft";
 export interface V2Response {
   value: string;
   files?: string[];
+  videoUrl?: string;
 }
 
 export interface V2Addons {

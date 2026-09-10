@@ -37,9 +37,14 @@ export function V2ActionInput({ action }: Props) {
     return defaultPrompt;
   };
 
-  const handleComplete = (files?: string[]) => {
-    journey.setResponse(action.id, { value: text, files });
-    journey.completeAction(action.id, { value: text, files });
+  const handleComplete = (files?: string[], videoUrl?: string) => {
+    const response = {
+      value: text || (videoUrl ? "Video response recorded." : ""),
+      files,
+      videoUrl,
+    };
+    journey.setResponse(action.id, response);
+    journey.completeAction(action.id, response);
   };
 
   switch (action.inputType) {
@@ -196,20 +201,36 @@ export function V2ActionInput({ action }: Props) {
           <InputRow
             value={text}
             onChange={setText}
+            showVideo={action.inputType === "text"}
+            onVideoRecorded={(url) => {
+              journey.setResponse(action.id, {
+                value: text || "Video response recorded.",
+                videoUrl: url,
+              });
+            }}
             onFiles={(files) => {
               journey.setResponse(action.id, { value: text, files });
             }}
-            showVideo={action.inputType === "upload"}
           />
+          {journey.state.responses[action.id]?.videoUrl && (
+            <p className="text-xs text-me-green" data-testid="v2-video-attached">
+              Video response attached — preview below the record button.
+            </p>
+          )}
           {!journey.isActionComplete(action.id) && (
             <button
               type="button"
               disabled={
                 action.inputType === "text"
-                  ? !text.trim()
+                  ? !text.trim() && !journey.state.responses[action.id]?.videoUrl
                   : !text.trim() && !journey.state.responses[action.id]?.files?.length
               }
-              onClick={() => handleComplete(journey.state.responses[action.id]?.files)}
+              onClick={() =>
+                handleComplete(
+                  journey.state.responses[action.id]?.files,
+                  journey.state.responses[action.id]?.videoUrl
+                )
+              }
               className="rounded-lg bg-me-navy px-4 py-2 text-sm text-white disabled:opacity-50"
               data-testid={`v2-complete-${action.id}`}
             >
