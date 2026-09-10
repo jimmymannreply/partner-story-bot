@@ -8,6 +8,7 @@ import { ConsentPage } from "@/pages/ConsentPage";
 import { JourneyV2Provider } from "@/v2/hooks/useJourneyV2";
 import { LandingPageV2 } from "@/v2/pages/LandingPageV2";
 import { JourneyPageV2 } from "@/v2/pages/JourneyPageV2";
+import { SubmissionsQueuePage } from "@/v2/pages/SubmissionsQueuePage";
 
 const basename =
   import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -15,6 +16,7 @@ const basename =
 const v2Standalone = import.meta.env.VITE_V2_STANDALONE === "true";
 const v2Base = v2Standalone ? "/" : "/v2";
 const v2Journey = v2Standalone ? "/journey" : "/v2/journey";
+const v2Submissions = v2Standalone ? "/submissions" : "/v2/submissions";
 
 function V1Shell() {
   return (
@@ -46,6 +48,7 @@ export default function App() {
           <Route element={<V2Shell />}>
             <Route path={v2Base} element={<LandingPageV2 />} />
             <Route path={v2Journey} element={<JourneyPageV2 />} />
+            <Route path={v2Submissions} element={<SubmissionsQueuePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

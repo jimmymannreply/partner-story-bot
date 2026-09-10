@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Volume2 } from "lucide-react";
 import type { V2Action } from "@/v2/data/journeyStagesV2";
 import {
@@ -18,8 +19,12 @@ interface Props {
 
 export function V2ActionInput({ action }: Props) {
   const journey = useJourneyV2();
+  const navigate = useNavigate();
   const { speak } = useSpeech();
   const { state } = journey;
+  const submissionsPath = import.meta.env.VITE_V2_STANDALONE
+    ? "/submissions"
+    : "/v2/submissions";
   const [text, setText] = useState(journey.state.responses[action.id]?.value ?? "");
   const [manualInput, setManualInput] = useState("");
   const [draftLoading, setDraftLoading] = useState(false);
@@ -421,17 +426,13 @@ export function V2ActionInput({ action }: Props) {
               onClick={() => {
                 journey.submit();
                 journey.completeAction(action.id);
+                navigate(submissionsPath);
               }}
               className="rounded-lg bg-me-green px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
               data-testid="v2-submit"
             >
               Submit story
             </button>
-          )}
-          {state.submitted && (
-            <p className="text-sm font-medium text-me-green">
-              Submitted — thank you. Your draft is saved locally in this demo.
-            </p>
           )}
         </div>
       );

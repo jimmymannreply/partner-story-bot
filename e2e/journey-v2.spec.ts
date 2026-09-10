@@ -19,4 +19,11 @@ test.describe("Partner Story Bot V2", () => {
     await page.getByTestId("addon-drawer-open").click();
     await expect(page.getByTestId("addon-drawer")).toBeVisible();
   });
+
+  test("v2 submissions queue page renders", async ({ page }) => {
+    await page.goto("/v2/submissions");
+    await expect(page.getByTestId("submissions-table")).toBeVisible();
+    await expect(page.getByTestId("draft-option-executive")).toBeVisible();
+    await expect(page.getByTestId("draft-option-full")).toBeVisible();
+  });
 });
