@@ -39,7 +39,11 @@ export function LandingPage() {
           Start my story
         </Link>
         <p className="mt-6 text-sm text-dl-text-secondary">
-          Or enter via the{" "}
+          Or try the{" "}
+          <Link to="/v2" className="text-dl-brand hover:underline">
+            V2 no-login demo
+          </Link>
+          {" · "}
           <Link to="/partner" className="text-dl-brand hover:underline">
             partner success stories page
           </Link>

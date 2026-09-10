@@ -19,6 +19,9 @@ az account show | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Sign in to Azure:"
     az login
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Azure login failed. If you see AADSTS53003, use a compliant device/VPN or ask IT to allow Azure CLI."
+    }
 }
 
 $envName = "partnerstory"
@@ -43,13 +46,19 @@ az staticwebapp create `
     --login-with-github
 
 $hostname = az staticwebapp show --name $appName --resource-group $rg --query "defaultHostname" -o tsv
+if ($LASTEXITCODE -ne 0 -or -not $hostname) {
+    Write-Error "Static Web App was not created. Check Azure login and permissions."
+}
+
 $token = az staticwebapp secrets list --name $appName --resource-group $rg --query "properties.apiKey" -o tsv
+if ($LASTEXITCODE -ne 0 -or -not $token) {
+    Write-Error "Could not retrieve deployment token."
+}
 
 Write-Host ""
-Write-Host "Add GitHub secret for CI/CD (if not created by Azure):"
-Write-Host "  gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body `"$token`""
+Write-Host "Setting GitHub secret for CI/CD..."
 & $gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body $token
 
 Write-Host ""
 Write-Host "Live URL: https://$hostname"
-Write-Host "No user licenses required — public anonymous access."
+Write-Host "No user licenses required - public anonymous access."

@@ -13,9 +13,18 @@ Open http://localhost:5173
 
 ## Routes
 
+### V1 (Partner Center sign-in flow)
+
 - `/` — Landing page ("Start my story")
 - `/partner` — Mock partner.microsoft.com page with "Share your story" CTA
 - `/journey` — Main guided journey experience
+
+### V2 (No-login core flow — Lovable Demo Plan v2)
+
+- `/v2` — Landing ("No account needed")
+- `/v2/journey` — Manual entry → consent → 11-step interview → Draft Assist → review/attest
+
+Preview Add-On toggles (login, adaptive questions, rating, customer capture) live in a drawer — off by default.
 
 ## Scripts
 
@@ -33,7 +42,8 @@ gh auth login
 
 After the GitHub Action completes, the shareable URL is:
 
-**https://\<your-github-username\>.github.io/partner-story-bot/**
+- V1: **https://\<your-github-username\>.github.io/partner-story-bot/**
+- V2: **https://\<your-github-username\>.github.io/partner-story-bot/v2/**
 
 ## Deploy to Azure Static Web Apps (public demo)
 

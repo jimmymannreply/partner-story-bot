@@ -4,6 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        me: {
+          navy: "#1E2761",
+          "navy-dark": "#141A47",
+          ice: "#CADCFC",
+          slate: "#4A5578",
+          amber: "#B8720F",
+          green: "#2F6F4E",
+          red: "#8A3B2E",
+          card: "#F4F6FB",
+          line: "#B9C2D6",
+        },
         dl: {
           page: "#F5F5F5",
           surface: "#FFFFFF",
@@ -20,7 +31,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Segoe UI Variable"', '"Segoe UI"', "system-ui", "sans-serif"],
+        sans: ['"Segoe UI Variable"', '"Segoe UI"', "Inter", "system-ui", "sans-serif"],
+        serif: ['Cambria', 'Georgia', '"Times New Roman"', "serif"],
       },
       boxShadow: {
         card: "0 1px 3px rgba(0,0,0,0.08)",
