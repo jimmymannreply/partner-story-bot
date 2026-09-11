@@ -7,9 +7,10 @@ export function LandingPageV2() {
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <p className="font-serif text-lg">Partner Story Bot V2</p>
           {!import.meta.env.VITE_V2_STANDALONE && (
-            <Link to="/" className="text-sm text-me-ice hover:underline">
-              View V1 demo
-            </Link>
+            <div className="flex gap-3 text-sm">
+              <Link to="/v3" className="text-me-ice hover:underline">V3 voice-first</Link>
+              <Link to="/" className="text-me-ice hover:underline">V1 demo</Link>
+            </div>
           )}
         </div>
       </header>

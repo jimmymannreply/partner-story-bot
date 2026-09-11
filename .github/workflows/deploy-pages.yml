@@ -29,6 +29,7 @@ jobs:
       - run: npm run build:all
       - run: cp dist/index.html dist/404.html
       - run: cp dist/v2/index.html dist/v2/404.html
+      - run: cp dist/v3/index.html dist/v3/404.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

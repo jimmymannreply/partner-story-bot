@@ -9,6 +9,10 @@ import { JourneyV2Provider } from "@/v2/hooks/useJourneyV2";
 import { LandingPageV2 } from "@/v2/pages/LandingPageV2";
 import { JourneyPageV2 } from "@/v2/pages/JourneyPageV2";
 import { SubmissionsQueuePage } from "@/v2/pages/SubmissionsQueuePage";
+import { JourneyV3Provider } from "@/v3/hooks/useJourneyV3";
+import { LandingPageV3 } from "@/v3/pages/LandingPageV3";
+import { JourneyPageV3 } from "@/v3/pages/JourneyPageV3";
+import { SubmissionsQueuePageV3 } from "@/v3/pages/SubmissionsQueuePageV3";
 
 const basename =
   import.meta.env.BASE_URL === "/" ? undefined : import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -17,6 +21,11 @@ const v2Standalone = import.meta.env.VITE_V2_STANDALONE === "true";
 const v2Base = v2Standalone ? "/" : "/v2";
 const v2Journey = v2Standalone ? "/journey" : "/v2/journey";
 const v2Submissions = v2Standalone ? "/submissions" : "/v2/submissions";
+
+const v3Standalone = import.meta.env.VITE_V3_STANDALONE === "true";
+const v3Base = v3Standalone ? "/" : "/v3";
+const v3Journey = v3Standalone ? "/journey" : "/v3/journey";
+const v3Submissions = v3Standalone ? "/submissions" : "/v3/submissions";
 
 function V1Shell() {
   return (
@@ -31,6 +40,14 @@ function V2Shell() {
     <JourneyV2Provider>
       <Outlet />
     </JourneyV2Provider>
+  );
+}
+
+function V3Shell() {
+  return (
+    <JourneyV3Provider>
+      <Outlet />
+    </JourneyV3Provider>
   );
 }
 
@@ -49,6 +66,11 @@ export default function App() {
             <Route path={v2Base} element={<LandingPageV2 />} />
             <Route path={v2Journey} element={<JourneyPageV2 />} />
             <Route path={v2Submissions} element={<SubmissionsQueuePage />} />
+          </Route>
+          <Route element={<V3Shell />}>
+            <Route path={v3Base} element={<LandingPageV3 />} />
+            <Route path={v3Journey} element={<JourneyPageV3 />} />
+            <Route path={v3Submissions} element={<SubmissionsQueuePageV3 />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -23,13 +23,36 @@ Open http://localhost:5173
 
 - `/v2` — Landing ("No account needed")
 - `/v2/journey` — Manual entry → consent → 11-step interview → Draft Assist → review/attest
+- `/v2/submissions` — Mock intake queue with scores and Word drafts
 
 Preview Add-On toggles (login, adaptive questions, rating, customer capture) live in a drawer — off by default.
+
+### V3 (Voice-first — Lovable Demo Plan v3)
+
+- `/v3` — Landing with single consent line ("just talk")
+- `/v3/journey` — Microsoft contact → voice-first 11-step interview → wrap-up confirm
+- `/v3/submissions` — Mock intake queue (same pattern as V2)
+
+Option A (Draft Assist) and Option B (Rubric Grading) are equal-weight preview toggles. Six add-on previews in a separate drawer. No attestation or PII badge in core flow.
+
+Reference plan: [`docs/Lovable_Demo_Plan_v3.docx`](docs/Lovable_Demo_Plan_v3.docx)
+
+### V2 vs V3 (Lovable plan deltas)
+
+| Area | V2 | V3 |
+|------|----|----|
+| Entry | Manual company/HQ/size fields | Required Microsoft contact (one field) |
+| Consent | Mid-flow + attest/sign at end | Single consent line on landing |
+| Input | Type-first (voice optional) | Voice-first (mic active, waveform) |
+| Finale | Draft Assist + review/attest | Wrap-up recap + Confirm only |
+| Preview toggles | One add-on drawer (4 toggles) | Options drawer (Draft A + Rubric B) + Add-ons drawer (6 toggles) |
+| Uploads | PII redaction badge | No PII badge in core |
 
 ## Scripts
 
 - `npm run dev` — Start dev server
-- `npm run build` — Production build
+- `npm run build` — Production build (V1 + V2 + V3 combined)
+- `npm run build:all` — Build V1 pages bundle plus standalone V2 and V3
 - `npm run test:e2e` — Playwright click-through tests
 
 ## Deploy to GitHub Pages
@@ -44,6 +67,7 @@ After the GitHub Action completes, the shareable URL is:
 
 - V1: **https://\<your-github-username\>.github.io/partner-story-bot/**
 - V2: **https://\<your-github-username\>.github.io/partner-story-bot/v2/**
+- V3: **https://\<your-github-username\>.github.io/partner-story-bot/v3/**
 
 ## Deploy to Azure Static Web Apps (public demo)
 
